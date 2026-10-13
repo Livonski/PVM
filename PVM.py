@@ -86,14 +86,19 @@ VM = PVM(data = data, instructions = instructions)
 
 #Loading instructions in memory
 loadInstruction(VM.instructions, OP.PUSH)
+loadInstruction(VM.instructions, 10)
+loadInstruction(VM.instructions, OP.PUSH)
+loadInstruction(VM.instructions, 20)
+loadInstruction(VM.instructions, OP.ADD)
+loadInstruction(VM.instructions, OP.PRINT)
+
+loadInstruction(VM.instructions, OP.PUSH)
 loadInstruction(VM.instructions, 6)
 loadInstruction(VM.instructions, OP.PUSH)
 loadInstruction(VM.instructions, 7)
 loadInstruction(VM.instructions, OP.MUL)
-loadInstruction(VM.instructions, OP.PUSH)
-loadInstruction(VM.instructions, 2)
-loadInstruction(VM.instructions, OP.ADD)
 loadInstruction(VM.instructions, OP.PRINT)
+
 loadInstruction(VM.instructions, OP.HALT)
 
 #VM before processing instructions
