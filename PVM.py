@@ -23,7 +23,7 @@ class stack:
     na : int
     sp : int
     capacity: int
-    items: array.array = field(default_factory=lambda: array.array('b'))
+    items: array.array = field(default_factory=lambda: array.array('B'))
 
 @dataclass
 class PVM:
@@ -124,9 +124,10 @@ for i in range(0, VM.instructions.capacity):
             stackPush(VM.data, X * Y)
         case OP.PRINT:
             #print("PRINT")
-            print("PVM has something to tell you - ", stackRead(VM.data))
+            print("PVM has something to tell you - ", stackPop(VM.data))
         case OP.HALT:
             #print("HALT")
+            VM.data.sp = -1
             print("Halt reached. VM finished execution")
             break
         case _:
