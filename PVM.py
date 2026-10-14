@@ -18,6 +18,10 @@ import array
 #254/FE - PRINT 0
 #255/FF - HALT  0
 
+S32BI = 4
+U8BI  = 1
+VOID  = 0
+
 class OP(Enum):
     PUSH  = 1
     ADD   = 10
@@ -89,7 +93,7 @@ def registerLoad(r, adrr, size):
 
 
 def readNextInstruction(s, bLen):
-    if(s.sp + bLen > s.capacity):
+    if(s.sp + bLen > s.na):
         raise MemoryError("Trying to read instructions outside of memory")
     operand = s.items[s.sp:s.sp + bLen]
     s.sp = s.sp + bLen
@@ -122,50 +126,60 @@ RAM = registers(numRegisters = memorySize.REGISTERS.value, items = bytearray(mem
 VM = PVM(data = data, RAM = RAM, instructions = instructions)
 
 #Loading instructions in memory
-loadInstruction(VM.instructions, OP.PUSH.value, [10], 4)
-loadInstruction(VM.instructions, OP.PUSH.value, [20], 4)
-loadInstruction(VM.instructions, OP.EQ.value, [], 0)
-loadInstruction(VM.instructions, OP.PRINT.value, [], 0)
+#while
+loadInstruction(VM.instructions, OP.PUSH.value, [0], S32BI) #0 
+loadInstruction(VM.instructions, OP.STORE.value, [0], U8BI) #5 
+loadInstruction(VM.instructions, OP.PUSH.value, [1], S32BI) #7 
+loadInstruction(VM.instructions, OP.STORE.value, [4], U8BI) #12
 
-loadInstruction(VM.instructions, OP.PUSH.value, [10], 4)
-loadInstruction(VM.instructions, OP.PUSH.value, [20], 4)
-loadInstruction(VM.instructions, OP.LT.value, [], 0)
-loadInstruction(VM.instructions, OP.PRINT.value, [], 0)
+loadInstruction(VM.instructions, OP.LOAD.value, [4], U8BI)  #14
+loadInstruction(VM.instructions, OP.PUSH.value, [5], S32BI) #16
+loadInstruction(VM.instructions, OP.GT.value, [], VOID)     #21
+loadInstruction(VM.instructions, OP.JZ.value, [26], U8BI)   #22
+loadInstruction(VM.instructions, OP.JMP.value, [45], U8BI)  #24
 
-loadInstruction(VM.instructions, OP.PUSH.value, [10], 4)
-loadInstruction(VM.instructions, OP.PUSH.value, [20], 4)
-loadInstruction(VM.instructions, OP.GT.value, [], 0)
-loadInstruction(VM.instructions, OP.PRINT.value, [], 0)
-loadInstruction(VM.instructions, OP.HALT.value, [], 0)
+loadInstruction(VM.instructions, OP.LOAD.value, [0], U8BI)  #26
+loadInstruction(VM.instructions, OP.LOAD.value, [4], U8BI)  #28
+loadInstruction(VM.instructions, OP.ADD.value, [], VOID)    #30
+loadInstruction(VM.instructions, OP.STORE.value, [0], U8BI) #31
+
+loadInstruction(VM.instructions, OP.LOAD.value, [4], U8BI)  #33
+loadInstruction(VM.instructions, OP.PUSH.value, [1], S32BI) #35
+loadInstruction(VM.instructions, OP.ADD.value, [], VOID)    #40
+loadInstruction(VM.instructions, OP.STORE.value, [4], U8BI) #41 
+
+loadInstruction(VM.instructions, OP.JMP.value, [14], U8BI)  #43
+
+loadInstruction(VM.instructions, OP.LOAD.value, [0], U8BI)  #45
+loadInstruction(VM.instructions, OP.PRINT.value, [], VOID)  #47
+loadInstruction(VM.instructions, OP.HALT.value, [], VOID)   #48
+#=============
 
 #VM before processing instructions
 #printVM(VM)
 
 #Processing instructions
 while(1):
-    opcode = readNextInstruction(VM.instructions, 1)
+    opcode = readNextInstruction(VM.instructions, U8BI)
     match opcode:
         case OP.PUSH.value:
-            Arg = readNextInstruction(VM.instructions, 4)
-            #print("PUSH ", Arg)
+            Arg = readNextInstruction(VM.instructions, S32BI)
             stackPush(VM.data, Arg)
         case OP.ADD.value:
             X = stackPop(VM.data)
             Y = stackPop(VM.data)
-            #print("ADD")
             stackPush(VM.data, Y + X)
         case OP.MUL.value:
             X = stackPop(VM.data)
             Y = stackPop(VM.data)
-            #print("MUL")
             stackPush(VM.data, Y * X)
         case OP.STORE.value:
-            adrr = readNextInstruction(VM.instructions, 1)
+            adrr = readNextInstruction(VM.instructions, U8BI)
             sv = stackPop(VM.data)
-            registerStore(VM.RAM, sv, adrr, 4)
+            registerStore(VM.RAM, sv, adrr, S32BI)
         case OP.LOAD.value:
-            adrr = readNextInstruction(VM.instructions, 1)
-            v = registerLoad(VM.RAM, adrr, 4)
+            adrr = readNextInstruction(VM.instructions, U8BI)
+            v = registerLoad(VM.RAM, adrr, S32BI)
             stackPush(VM.data, v)
         case OP.EQ.value:
             X = stackPop(VM.data)
@@ -179,11 +193,21 @@ while(1):
             X = stackPop(VM.data)
             Y = stackPop(VM.data)
             stackPush(VM.data, Y > X)
+        case OP.JMP.value:
+            adrr = readNextInstruction(VM.instructions, U8BI)
+            if(adrr > VM.instructions.capacity):
+                raise ValueError(f"Trying to jump to a instruction({adrr}) outside of instruction set")
+            VM.instructions.sp = adrr
+        case OP.JZ.value:
+            adrr = readNextInstruction(VM.instructions, U8BI)
+            if(adrr > VM.instructions.capacity):
+                raise ValueError(f"Trying to jump to a instruction({adrr}) outside of instruction set")
+            condition = stackPop(VM.data)
+            if condition == 0:
+                VM.instructions.sp = adrr
         case OP.PRINT.value:
-            #print("PRINT")
             print("PVM has something to tell you - ", stackPop(VM.data))
         case OP.HALT.value:
-            #print("HALT")
             print("Halt reached. VM finished execution")
             break
         case _:
