@@ -13,10 +13,13 @@ import array
 #48 /30 - EQ    0
 #49 /31 - LT    0
 #50 /32 - GT    0
-#64 /40 - JMP   instruction-u1
-#65 /41 - JZ    instruction-u1
+#64 /40 - JMP   toLabel-u1 instruction-u1
+#65 /41 - JZ    toLabel-u1 instruction-u1
 #254/FE - PRINT 0
 #255/FF - HALT  0
+
+ADRESS = 0
+LABEL  = 1
 
 S32BI = 4
 U8BI  = 1
@@ -58,6 +61,7 @@ class PVM:
     data: stack
     RAM: registers
     instructions: stack
+    labels : array.array = field(default_factory=lambda: array.array('B'))
 
 def stackPush(s, v):
     if(s.na + 4 > s.capacity):
@@ -127,32 +131,35 @@ VM = PVM(data = data, RAM = RAM, instructions = instructions)
 
 #Loading instructions in memory
 #while
-loadInstruction(VM.instructions, OP.PUSH.value, [0], S32BI) #0 
+loadInstruction(VM.instructions, OP.PUSH.value,  [0], S32BI) #0 
 loadInstruction(VM.instructions, OP.STORE.value, [0], U8BI) #5 
-loadInstruction(VM.instructions, OP.PUSH.value, [1], S32BI) #7 
+loadInstruction(VM.instructions, OP.PUSH.value,  [1], S32BI) #7 
 loadInstruction(VM.instructions, OP.STORE.value, [4], U8BI) #12
 
-loadInstruction(VM.instructions, OP.LOAD.value, [4], U8BI)  #14
-loadInstruction(VM.instructions, OP.PUSH.value, [5], S32BI) #16
-loadInstruction(VM.instructions, OP.GT.value, [], VOID)     #21
-loadInstruction(VM.instructions, OP.JZ.value, [26], U8BI)   #22
-loadInstruction(VM.instructions, OP.JMP.value, [45], U8BI)  #24
+VM.labels.append(VM.instructions.na) #While condition label-0
+loadInstruction(VM.instructions, OP.LOAD.value,  [4], U8BI)  #14
+loadInstruction(VM.instructions, OP.PUSH.value,  [5], S32BI) #16
+loadInstruction(VM.instructions, OP.GT.value,    [], VOID)     #21
+loadInstruction(VM.instructions, OP.JZ.value,    [LABEL, 1], U8BI)   #22
+loadInstruction(VM.instructions, OP.JMP.value,   [LABEL, 2], U8BI)  #24
 
-loadInstruction(VM.instructions, OP.LOAD.value, [0], U8BI)  #26
-loadInstruction(VM.instructions, OP.LOAD.value, [4], U8BI)  #28
-loadInstruction(VM.instructions, OP.ADD.value, [], VOID)    #30
+VM.labels.append(VM.instructions.na) #While body label-1
+loadInstruction(VM.instructions, OP.LOAD.value,  [0], U8BI)  #26
+loadInstruction(VM.instructions, OP.LOAD.value,  [4], U8BI)  #28
+loadInstruction(VM.instructions, OP.ADD.value,   [], VOID)    #30
 loadInstruction(VM.instructions, OP.STORE.value, [0], U8BI) #31
 
-loadInstruction(VM.instructions, OP.LOAD.value, [4], U8BI)  #33
-loadInstruction(VM.instructions, OP.PUSH.value, [1], S32BI) #35
-loadInstruction(VM.instructions, OP.ADD.value, [], VOID)    #40
+loadInstruction(VM.instructions, OP.LOAD.value,  [4], U8BI)  #33
+loadInstruction(VM.instructions, OP.PUSH.value,  [1], S32BI) #35
+loadInstruction(VM.instructions, OP.ADD.value,   [], VOID)    #40
 loadInstruction(VM.instructions, OP.STORE.value, [4], U8BI) #41 
 
-loadInstruction(VM.instructions, OP.JMP.value, [14], U8BI)  #43
+loadInstruction(VM.instructions, OP.JMP.value,   [LABEL, 0], U8BI)  #43
 
-loadInstruction(VM.instructions, OP.LOAD.value, [0], U8BI)  #45
+VM.labels.append(VM.instructions.na) #End label-2
+loadInstruction(VM.instructions, OP.LOAD.value,  [0], U8BI)  #45
 loadInstruction(VM.instructions, OP.PRINT.value, [], VOID)  #47
-loadInstruction(VM.instructions, OP.HALT.value, [], VOID)   #48
+loadInstruction(VM.instructions, OP.HALT.value,  [], VOID)   #48
 #=============
 
 #VM before processing instructions
@@ -194,14 +201,28 @@ while(1):
             Y = stackPop(VM.data)
             stackPush(VM.data, Y > X)
         case OP.JMP.value:
-            adrr = readNextInstruction(VM.instructions, U8BI)
+            toLabel = readNextInstruction(VM.instructions, U8BI)
+            if toLabel:
+                labelID = readNextInstruction(VM.instructions, U8BI)
+                adrr    = VM.labels[labelID]
+            else:
+                adrr = readNextInstruction(VM.instructions, U8BI)
+
             if(adrr > VM.instructions.capacity):
                 raise ValueError(f"Trying to jump to a instruction({adrr}) outside of instruction set")
+            
             VM.instructions.sp = adrr
         case OP.JZ.value:
-            adrr = readNextInstruction(VM.instructions, U8BI)
+            toLabel = readNextInstruction(VM.instructions, U8BI)
+            if toLabel:
+                labelID = readNextInstruction(VM.instructions, U8BI)
+                adrr    = VM.labels[labelID]
+            else:
+                adrr = readNextInstruction(VM.instructions, U8BI)
+            
             if(adrr > VM.instructions.capacity):
                 raise ValueError(f"Trying to jump to a instruction({adrr}) outside of instruction set")
+            
             condition = stackPop(VM.data)
             if condition == 0:
                 VM.instructions.sp = adrr
