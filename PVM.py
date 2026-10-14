@@ -8,8 +8,13 @@ import array
 #1  /01 - PUSH  value-s4
 #10 /0A - ADD   0
 #12 /0C - MUL   0
-#20 /20 - STORE adress-u1
-#21 /21 - LOAD  adress-u1
+#32 /20 - STORE adress-u1
+#33 /21 - LOAD  adress-u1
+#48 /30 - EQ    0
+#49 /31 - LT    0
+#50 /32 - GT    0
+#64 /40 - JMP   instruction-u1
+#65 /41 - JZ    instruction-u1
 #254/FE - PRINT 0
 #255/FF - HALT  0
 
@@ -17,8 +22,13 @@ class OP(Enum):
     PUSH  = 1
     ADD   = 10
     MUL   = 12
-    STORE = 20
-    LOAD  = 21
+    STORE = 32
+    LOAD  = 33
+    EQ    = 48
+    LT    = 49
+    GT    = 50
+    JMP   = 64
+    JZ    = 65
     PRINT = 254
     HALT  = 255
 
@@ -112,17 +122,19 @@ RAM = registers(numRegisters = memorySize.REGISTERS.value, items = bytearray(mem
 VM = PVM(data = data, RAM = RAM, instructions = instructions)
 
 #Loading instructions in memory
-loadInstruction(VM.instructions, OP.PUSH.value, [6], 4)
-loadInstruction(VM.instructions, OP.PUSH.value, [7], 4)
-loadInstruction(VM.instructions, OP.MUL.value, [], 0)
-loadInstruction(VM.instructions, OP.STORE.value, [0], 1)
+loadInstruction(VM.instructions, OP.PUSH.value, [10], 4)
+loadInstruction(VM.instructions, OP.PUSH.value, [20], 4)
+loadInstruction(VM.instructions, OP.EQ.value, [], 0)
+loadInstruction(VM.instructions, OP.PRINT.value, [], 0)
 
-loadInstruction(VM.instructions, OP.LOAD.value, [0], 1)
-loadInstruction(VM.instructions, OP.PUSH.value, [2], 4)
-loadInstruction(VM.instructions, OP.ADD.value, [], 0)
-loadInstruction(VM.instructions, OP.STORE.value, [4], 1)
+loadInstruction(VM.instructions, OP.PUSH.value, [10], 4)
+loadInstruction(VM.instructions, OP.PUSH.value, [20], 4)
+loadInstruction(VM.instructions, OP.LT.value, [], 0)
+loadInstruction(VM.instructions, OP.PRINT.value, [], 0)
 
-loadInstruction(VM.instructions, OP.LOAD.value, [4], 1)
+loadInstruction(VM.instructions, OP.PUSH.value, [10], 4)
+loadInstruction(VM.instructions, OP.PUSH.value, [20], 4)
+loadInstruction(VM.instructions, OP.GT.value, [], 0)
 loadInstruction(VM.instructions, OP.PRINT.value, [], 0)
 loadInstruction(VM.instructions, OP.HALT.value, [], 0)
 
@@ -141,12 +153,12 @@ while(1):
             X = stackPop(VM.data)
             Y = stackPop(VM.data)
             #print("ADD")
-            stackPush(VM.data, X + Y)
+            stackPush(VM.data, Y + X)
         case OP.MUL.value:
             X = stackPop(VM.data)
             Y = stackPop(VM.data)
             #print("MUL")
-            stackPush(VM.data, X * Y)
+            stackPush(VM.data, Y * X)
         case OP.STORE.value:
             adrr = readNextInstruction(VM.instructions, 1)
             sv = stackPop(VM.data)
@@ -155,6 +167,18 @@ while(1):
             adrr = readNextInstruction(VM.instructions, 1)
             v = registerLoad(VM.RAM, adrr, 4)
             stackPush(VM.data, v)
+        case OP.EQ.value:
+            X = stackPop(VM.data)
+            Y = stackPop(VM.data)
+            stackPush(VM.data, Y == X)
+        case OP.LT.value:
+            X = stackPop(VM.data)
+            Y = stackPop(VM.data)
+            stackPush(VM.data, Y < X)
+        case OP.GT.value:
+            X = stackPop(VM.data)
+            Y = stackPop(VM.data)
+            stackPush(VM.data, Y > X)
         case OP.PRINT.value:
             #print("PRINT")
             print("PVM has something to tell you - ", stackPop(VM.data))
