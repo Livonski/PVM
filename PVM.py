@@ -15,6 +15,7 @@ VOID  = 0
 #1  /01 - PUSH   value-s4
 #10 /0A - ADD    0
 #12 /0C - MUL    0
+#13 /0D - SUB    0
 #32 /20 - STORE  adress-u1
 #33 /21 - LOAD   adress-u1
 #34 /22 - LSTORE index-u1
@@ -35,6 +36,7 @@ class OP(Enum):
     PUSH   = 1
     ADD    = 10
     MUL    = 12
+    SUB    = 13
     STORE  = 32
     LOAD   = 33
     LSTORE = 34
@@ -178,20 +180,37 @@ LMData       = registers(numRegisters = memorySize.LMDATA.value, items = bytearr
 VM = PVM(data = data, RAM = RAM, callstack = callstack, LMIndex = LMIndex, LMCount = LMCount, LMData = LMData, instructions = instructions)
 
 #Loading instructions in memory
-#square example
-loadInstruction(VM.instructions, OP.PUSH.value,  [7], S32BI)
+#factorial example
+loadInstruction(VM.instructions, OP.PUSH.value, [5], S32BI)
+
 loadInstruction(VM.instructions, OP.CALL.value,  [1, 0], U8BI)
+
 loadInstruction(VM.instructions, OP.PRINT.value, [], VOID)
 loadInstruction(VM.instructions, OP.HALT.value,  [], VOID)
 
-#Label-0 Square function
+#Label - 0 factorial function
 VM.labels.append(VM.instructions.na)
 loadInstruction(VM.instructions, OP.ENTER.value,  [1], U8BI)
 loadInstruction(VM.instructions, OP.LSTORE.value, [0], U8BI)
-loadInstruction(VM.instructions, OP.LLOAD.value,  [0], U8BI)
-loadInstruction(VM.instructions, OP.LLOAD.value,  [0], U8BI)
-loadInstruction(VM.instructions, OP.MUL.value,    [0], VOID)
-loadInstruction(VM.instructions, OP.RET.value,    [0], VOID)
+
+loadInstruction(VM.instructions, OP.LLOAD.value, [0], U8BI)
+loadInstruction(VM.instructions, OP.PUSH.value,  [1], S32BI)
+loadInstruction(VM.instructions, OP.GT.value,    [], VOID)
+loadInstruction(VM.instructions, OP.JZ.value,    [1, 1], U8BI)
+
+loadInstruction(VM.instructions, OP.LLOAD.value, [0], U8BI)
+loadInstruction(VM.instructions, OP.LLOAD.value, [0], U8BI)
+loadInstruction(VM.instructions, OP.PUSH.value, [1], S32BI)
+loadInstruction(VM.instructions, OP.SUB.value,  [], VOID)
+loadInstruction(VM.instructions, OP.CALL.value,  [1, 0], U8BI)
+loadInstruction(VM.instructions, OP.MUL.value,  [], VOID)
+loadInstruction(VM.instructions, OP.RET.value,  [], VOID)
+
+#Label - 1 exit recursion
+VM.labels.append(VM.instructions.na)
+loadInstruction(VM.instructions, OP.PUSH.value, [1], S32BI)
+loadInstruction(VM.instructions, OP.RET.value,  [], VOID)
+
 #=============
 
 #VM before processing instructions
@@ -212,6 +231,10 @@ while(1):
             X = stackPop(VM.data)
             Y = stackPop(VM.data)
             stackPush(VM.data, Y * X)
+        case OP.SUB.value:
+            X = stackPop(VM.data)
+            Y = stackPop(VM.data)
+            stackPush(VM.data, Y - X)            
         case OP.STORE.value:
             adrr = readNextInstruction(VM.instructions, U8BI)
             sv = stackPop(VM.data)
