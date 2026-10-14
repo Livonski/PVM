@@ -42,7 +42,7 @@ class registers:
 @dataclass
 class PVM:
     data: stack
-    RAM: bytearray
+    RAM: registers
     instructions: stack
 
 def stackPush(s, v):
@@ -79,7 +79,7 @@ def registerLoad(r, adrr, size):
 
 
 def readNextInstruction(s, bLen):
-    if(s.na + bLen > s.capacity):
+    if(s.sp + bLen > s.capacity):
         raise MemoryError("Trying to read instructions outside of memory")
     operand = s.items[s.sp:s.sp + bLen]
     s.sp = s.sp + bLen
